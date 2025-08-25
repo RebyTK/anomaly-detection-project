@@ -8,29 +8,48 @@ import os
 # Suppress TensorFlow logs
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
+# =========================
 # Load model, scaler, and threshold
+# =========================
 autoencoder = tf.keras.models.load_model("rich_behavior_model.h5", compile=False)
 scaler = joblib.load("rich_scaler.pkl")
 
 with open("rich_threshold.json", "r") as f:
     threshold = json.load(f)["threshold"]
 
-# Example batch of new data (simulate real-time user behavior)
-samples = pd.read_csv("rich_user_behavior.csv").drop("label", axis=1)
+# =========================
+# Load dataset for batch inference
+# =========================
+data = pd.read_csv("rich_user_behavior.csv")
+X = data.drop("label", axis=1).values
 
 # Scale input
-X_new = scaler.transform(samples)
+X_scaled = scaler.transform(X)
 
-# Predict reconstruction error
-recon = autoencoder.predict(X_new)
-errors = np.mean((X_new - recon) ** 2, axis=1)
+# =========================
+# Predict reconstruction errors
+# =========================
+recon = autoencoder.predict(X_scaled, verbose=0)
+errors = np.mean((X_scaled - recon) ** 2, axis=1)
 
-# Add predictions back to dataframe
-samples["reconstruction_error"] = errors
-samples["anomaly_detected"] = (errors > threshold).astype(int)
+# Add results to dataframe
+data["reconstruction_error"] = errors
+data["anomaly_detected"] = (errors > threshold).astype(int)
 
-# Output results
+# =========================
+# Summary Statistics
+# =========================
+total_samples = len(data)
+total_anomalies = data["anomaly_detected"].sum()
 print("\n=== Batch Inference Results ===")
-for i, row in samples.iterrows():
-    print(f"Sample {i+1}: {row.to_dict()}")
-print("\nThreshold:", threshold)
+print(f"Total samples: {total_samples}")
+print(f"Detected anomalies: {total_anomalies}")
+print(f"Threshold: {threshold:.6f}\n")
+
+# Show some flagged samples
+print("🔎 Example Anomalies:")
+print(data[data["anomaly_detected"] == 1].head())
+
+# Save results
+data.to_csv("batch_inference_results.csv", index=False)
+print("\n✅ Batch results saved to batch_inference_results.csv")
