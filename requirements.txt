@@ -9,4 +9,3 @@ h5py
 json5
 keras
 tensorflow>=2.5.0
-data_generator
