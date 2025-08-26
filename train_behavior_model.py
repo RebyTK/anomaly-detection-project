@@ -1,50 +1,75 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
 import tensorflow as tf
-from tensorflow.keras import layers, models # type: ignore
-from sklearn.preprocessing import MinMaxScaler
-import matplotlib.pyplot as plt
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+import joblib
+import json
+import os
 
-# Load data
-df = pd.read_csv("user_behavior.csv")
-X = df[["typing_ms", "app_opens"]].values
+# Suppress TensorFlow logs
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
-# Normalize
-scaler = MinMaxScaler()
+# =========================
+# Load dataset
+# =========================
+data = pd.read_csv("user_behavior.csv")   # <-- basic dataset file
+
+# Drop label column
+X = data.drop("label", axis=1).values
+
+# Scale
+scaler = StandardScaler()
 X_scaled = scaler.fit_transform(X)
 
-# Use only "normal" data for training
-X_train = X_scaled[df["label"] == 0]
+# Train/validation split
+X_train, X_val = train_test_split(X_scaled, test_size=0.2, random_state=42)
 
-# Autoencoder
+# =========================
+# Autoencoder Model
+# =========================
 input_dim = X_train.shape[1]
-autoencoder = models.Sequential([
-    layers.Input(shape=(input_dim,)),
-    layers.Dense(4, activation="relu"),
-    layers.Dense(input_dim, activation="sigmoid")
+
+encoder = tf.keras.Sequential([
+    tf.keras.layers.Input(shape=(input_dim,)),
+    tf.keras.layers.Dense(8, activation="relu"),
+    tf.keras.layers.Dense(4, activation="relu"),
 ])
 
+decoder = tf.keras.Sequential([
+    tf.keras.layers.Dense(8, activation="relu"),
+    tf.keras.layers.Dense(input_dim, activation="linear"),
+])
+
+autoencoder = tf.keras.Sequential([encoder, decoder])
 autoencoder.compile(optimizer="adam", loss="mse")
-autoencoder.fit(X_train, X_train, epochs=30, batch_size=16, verbose=1)
 
-# Compute reconstruction error for all data
-recons = autoencoder.predict(X_scaled)
-errors = np.mean((X_scaled - recons) ** 2, axis=1)
+# =========================
+# Train
+# =========================
+history = autoencoder.fit(
+    X_train, X_train,
+    epochs=20,
+    batch_size=16,
+    validation_data=(X_val, X_val),
+    verbose=1
+)
 
-# Add anomaly score
-df["anomaly_score"] = errors
-
-print(df.head())
-
-# Save model + scaler
+# =========================
+# Save Model & Scaler
+# =========================
 autoencoder.save("behavior_model.h5")
-import joblib
 joblib.dump(scaler, "scaler.pkl")
 
-# Visualize anomalies
-plt.scatter(df["typing_ms"], df["app_opens"], c=df["anomaly_score"], cmap="coolwarm")
-plt.xlabel("Typing Rhythm (ms)")
-plt.ylabel("App Opens")
-plt.title("User Behavior with Anomaly Scores")
-plt.colorbar(label="Anomaly Score")
-plt.show()
+# =========================
+# Compute Threshold
+# =========================
+recon = autoencoder.predict(X_val, verbose=0)
+errors = np.mean((X_val - recon) ** 2, axis=1)
+threshold = float(np.mean(errors) + 2 * np.std(errors))
+
+with open("threshold.json", "w") as f:
+    json.dump({"threshold": threshold}, f)
+
+print("\n✅ Basic Training complete.")
+print(f"Threshold set at: {threshold:.6f}")
