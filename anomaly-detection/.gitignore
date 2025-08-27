@@ -1,0 +1,17 @@
+# Ignore virtual environments
+venv/
+
+# Ignore Python cache
+__pycache__/
+*.pyc
+
+# Ignore model + generated data (can regenerate)
+*.h5
+*.pkl
+*.json
+*.csv
+
+# Ignore OS files
+.DS_Store
+
+ondevice-behaviour/
