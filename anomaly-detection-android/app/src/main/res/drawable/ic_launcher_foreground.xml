@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <!-- Background circle -->
+    <path
+        android:fillColor="@color/white"
+        android:pathData="M54,54m-48,0a48,48 0,1 1,96 0a48,48 0,1 1,-96 0"/>
+    
+    <!-- Anomaly detection symbol (exclamation mark in triangle) -->
+    <path
+        android:fillColor="@color/primary_color"
+        android:pathData="M54,20L30,80L78,80Z"/>
+    
+    <!-- Exclamation mark -->
+    <path
+        android:fillColor="@color/white"
+        android:pathData="M54,35L54,35A2,2 0,0 1,56 37L56,37A2,2 0,0 1,54 39L54,39A2,2 0,0 1,52 37L52,37A2,2 0,0 1,54 35Z"/>
+    
+    <path
+        android:fillColor="@color/white"
+        android:pathData="M54,45L54,45A2,2 0,0 1,56 47L56,47A2,2 0,0 1,54 49L54,49A2,2 0,0 1,52 47L52,47A2,2 0,0 1,54 45Z"/>
+    
+    <path
+        android:fillColor="@color/white"
+        android:pathData="M54,55L54,55A2,2 0,0 1,56 57L56,57A2,2 0,0 1,54 59L54,59A2,2 0,0 1,52 57L52,57A2,2 0,0 1,54 55Z"/>
+</vector>

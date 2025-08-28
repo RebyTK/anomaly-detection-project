@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="4dp"
+    app:cardCornerRadius="8dp"
+    app:cardElevation="2dp"
+    app:cardBackgroundColor="@color/error_color">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <TextView
+            android:id="@+id/anomalyValueTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Value: 0.0"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="@color/white"
+            android:layout_marginBottom="4dp"/>
+
+        <TextView
+            android:id="@+id/anomalyReasonTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Reason: Statistical outlier"
+            android:textSize="14sp"
+            android:textColor="@color/white"
+            android:layout_marginBottom="4dp"/>
+
+        <TextView
+            android:id="@+id/anomalyTimestampTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Time: 12:00:00"
+            android:textSize="12sp"
+            android:textColor="@color/white"/>
+    </LinearLayout>
+</androidx.cardview.widget.CardView>

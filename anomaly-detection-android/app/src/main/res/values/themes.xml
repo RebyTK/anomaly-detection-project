@@ -1,0 +1,15 @@
+<resources>
+    <style name="Theme.AnomalyDetection" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
+        <item name="colorPrimary">@color/primary_color</item>
+        <item name="colorPrimaryVariant">@color/primary_dark</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorSecondary">@color/secondary_color</item>
+        <item name="colorSecondaryVariant">@color/accent_color</item>
+        <item name="colorOnSecondary">@color/black</item>
+        <item name="android:windowBackground">@color/background_color</item>
+    </style>
+
+    <style name="AppTheme" parent="Theme.AnomalyDetection">
+        <!-- Customize your theme here. -->
+    </style>
+</resources>
