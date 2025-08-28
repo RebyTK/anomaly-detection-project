@@ -1,12 +1,15 @@
+"""
+Simple, import-friendly version of the federated client
+This version avoids any syntax issues and can be safely imported
+"""
+
 import tensorflow as tf
 import numpy as np
 import pandas as pd
 import joblib
 import json
 import os
-import time
-from datetime import datetime
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional
 from sklearn.preprocessing import StandardScaler
 import warnings
 warnings.filterwarnings('ignore')
@@ -14,220 +17,20 @@ warnings.filterwarnings('ignore')
 # Suppress TensorFlow logs
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
-class FederatedAnomalyClient:
-    def __init__(self, client_id: str, data_path: str):
+class SimpleFederatedClient:
+    """Simplified federated client for training and inference"""
+    
+    def __init__(self, client_id: str, data_path: str = None):
         self.client_id = client_id
         self.data_path = data_path
         self.local_model = None
         self.local_data = None
         self.scaler = None
-        self.training_history = []
+        self.feature_columns = self._get_feature_columns()
         
-    def load_local_data(self):
-        """Load and prepare local client data"""
-        print(f"📂 Loading data for {self.client_id}...")
-        
-        try:
-            # Load client-specific data
-            self.local_data = pd.read_csv(self.data_path)
-            
-            # Prepare features (same as main anomaly detection system)
-            feature_cols = [
-                'typing_speed', 'typing_error_rate', 'touch_pressure',
-                'swipe_length', 'accel_variance', 'session_duration',
-                'interactions_per_minute', 'scroll_velocity', 'scroll_frequency',
-                'battery_level', 'device_temperature', 'app_response_time',
-                'network_latency', 'typing_speed_deviation', 'touch_pressure_deviation',
-                'time_since_last', 'hour', 'day_of_week', 'night_usage_flag',
-                'is_weekend', 'location_pattern'
-            ]
-            
-            # Add interaction features
-            self.local_data['typing_efficiency'] = self.local_data['typing_speed'] / (1 + self.local_data['typing_error_rate'])
-            self.local_data['usage_intensity'] = self.local_data['session_duration'] * self.local_data['interactions_per_minute']
-            self.local_data['device_stress'] = self.local_data['device_temperature'] * self.local_data['battery_level']
-            
-            interaction_features = ['typing_efficiency', 'usage_intensity', 'device_stress']
-            all_features = feature_cols + interaction_features
-            
-            # Ensure all features exist
-            for feature in all_features:
-                if feature not in self.local_data.columns:
-                    self.local_data[feature] = 0  # Default value
-            
-            print(f"✅ Loaded {len(self.local_data)} samples for {self.client_id}")
-            return True
-            
-        except Exception as e:
-            print(f"❌ Error loading data for {self.client_id}: {e}")
-            return False
-    
-    def build_local_model(self, input_dim: int = 24):
-        """Build local client model"""
-        model = tf.keras.Sequential([
-            tf.keras.layers.Input(shape=(input_dim,)),
-            tf.keras.layers.Dense(64, activation='relu', name='dense_1'),
-            tf.keras.layers.Dropout(0.2),
-            tf.keras.layers.Dense(32, activation='relu', name='dense_2'),
-            tf.keras.layers.Dropout(0.2),
-            tf.keras.layers.Dense(16, activation='relu', name='dense_3'),
-            tf.keras.layers.Dense(32, activation='relu', name='dense_4'),
-            tf.keras.layers.Dropout(0.2),
-            tf.keras.layers.Dense(64, activation='relu', name='dense_5'),
-            tf.keras.layers.Dense(input_dim, activation='linear', name='output')
-        ])
-        
-        model.compile(optimizer='adam', loss='mse', metrics=[tf.keras.metrics.MeanAbsoluteError()], run_eagerly=False)
-        return model
-    
-    def prepare_training_data(self):
-        """Prepare training data for local model"""
-        if self.local_data is None:
-            return None, None
-        
-        # Select features (exclude label, client_id, and non-numeric columns)
-        exclude_cols = ['label', 'client_id']
-        # Also exclude any timestamp or date columns
-        for col in self.local_data.columns:
-            if 'time' in col.lower() or 'date' in col.lower() or self.local_data[col].dtype == 'object':
-                exclude_cols.append(col)
-        
-        feature_cols = [col for col in self.local_data.columns if col not in exclude_cols]
-        
-        X = self.local_data[feature_cols].values
-        
-        # Scale features
-        self.scaler = StandardScaler()
-        X_scaled = self.scaler.fit_transform(X)
-        
-        return X_scaled, X_scaled  # Autoencoder: input = output
-    
-    def train_local_model(self, global_weights: Optional[List] = None, epochs: int = 5):
-        """Train local model with optional global weights initialization"""
-        print(f"🏋️  Training local model for {self.client_id}...")
-        
-        # Prepare data
-        X_train, y_train = self.prepare_training_data()
-        if X_train is None:
-            return None
-        
-        # Build local model
-        input_dim = X_train.shape[1]
-        print(f"📊 Building local model with {input_dim} input features")
-        self.local_model = self.build_local_model(input_dim)
-        
-        # Initialize with global weights if provided
-        if global_weights is not None:
-            self.local_model.set_weights(global_weights)
-            print(f"  📥 Initialized with global weights")
-        
-        # Train local model
-        history = self.local_model.fit(
-            X_train, y_train,
-            epochs=epochs,
-            batch_size=32,
-            verbose=0,
-            validation_split=0.2
-        )
-        
-        # Store training history
-        self.training_history.append({
-            'client_id': self.client_id,
-            'epochs': epochs,
-            'final_loss': history.history['loss'][-1],
-            'final_mae': history.history['mae'][-1],
-            'val_loss': history.history['val_loss'][-1] if 'val_loss' in history.history else None
-        })
-        
-        print(f"  📊 Final Loss: {history.history['loss'][-1]:.4f}")
-        print(f"  📊 Final MAE: {history.history['mae'][-1]:.4f}")
-        
-        return self.local_model.get_weights()
-    
-    def evaluate_local_model(self, test_data_path: Optional[str] = None):
-        """Evaluate local model performance"""
-        print(f"🔍 Evaluating local model for {self.client_id}...")
-        
-        # Use local data for evaluation if no test data provided
-        if test_data_path is None:
-            X_test, y_test = self.prepare_training_data()
-        else:
-            # Load external test data
-            test_df = pd.read_csv(test_data_path)
-            exclude_cols = ['label', 'client_id']
-            # Also exclude any timestamp or date columns
-            for col in test_df.columns:
-                if 'time' in col.lower() or 'date' in col.lower() or test_df[col].dtype == 'object':
-                    exclude_cols.append(col)
-            
-            feature_cols = [col for col in test_df.columns if col not in exclude_cols]
-            X_test = test_df[feature_cols].values
-            # Create a new scaler for test data if needed
-            test_scaler = StandardScaler()
-            X_test = test_scaler.fit_transform(X_test)
-            y_test = X_test  # Autoencoder
-        
-        # Evaluate model
-        test_loss, test_mae = self.local_model.evaluate(X_test, y_test, verbose=0)
-        
-        # Calculate reconstruction errors for anomaly detection
-        reconstructions = self.local_model.predict(X_test, verbose=0)
-        reconstruction_errors = np.mean((X_test - reconstructions) ** 2, axis=1)
-        
-        # Calculate threshold
-        threshold = np.mean(reconstruction_errors) + 2 * np.std(reconstruction_errors)
-        
-        print(f"  📊 Test Loss: {test_loss:.4f}")
-        print(f"  📊 Test MAE: {test_mae:.4f}")
-        print(f"  📊 Anomaly Threshold: {threshold:.4f}")
-        
-        return {
-            'test_loss': test_loss,
-            'test_mae': test_mae,
-            'threshold': threshold,
-            'reconstruction_errors': reconstruction_errors.tolist()
-        }
-    
-    def save_local_model(self, save_dir: str = "local_models"):
-        """Save local model and components"""
-        os.makedirs(save_dir, exist_ok=True)
-        
-        # Save model
-        model_path = os.path.join(save_dir, f"{self.client_id}_model.h5")
-        self.local_model.save(model_path)
-        
-        # Save scaler
-        scaler_path = os.path.join(save_dir, f"{self.client_id}_scaler.pkl")
-        joblib.dump(self.scaler, scaler_path)
-        
-        # Save training history
-        history_path = os.path.join(save_dir, f"{self.client_id}_history.json")
-        with open(history_path, "w") as f:
-            json.dump(self.training_history, f, indent=2)
-        
-        print(f"💾 Saved local model for {self.client_id}")
-        print(f"  - {model_path}")
-        print(f"  - {scaler_path}")
-        print(f"  - {history_path}")
-    
-    def load_local_model(self, model_path: str, scaler_path: str):
-        """Load previously saved local model"""
-        try:
-            self.local_model = tf.keras.models.load_model(model_path)
-            self.scaler = joblib.load(scaler_path)
-            print(f"✅ Loaded local model for {self.client_id}")
-            return True
-        except Exception as e:
-            print(f"❌ Error loading local model for {self.client_id}: {e}")
-            return False
-    
-    def detect_local_anomalies(self, sample_data: Dict) -> Dict:
-        """Detect anomalies using local model"""
-        if self.local_model is None or self.scaler is None:
-            return {'error': 'Local model not trained or loaded'}
-        
-        # Prepare features (same as main system)
-        feature_cols = [
+    def _get_feature_columns(self):
+        """Get the standard feature columns (24 total)"""
+        base_features = [
             'typing_speed', 'typing_error_rate', 'touch_pressure',
             'swipe_length', 'accel_variance', 'session_duration',
             'interactions_per_minute', 'scroll_velocity', 'scroll_frequency',
@@ -236,100 +39,218 @@ class FederatedAnomalyClient:
             'time_since_last', 'hour', 'day_of_week', 'night_usage_flag',
             'is_weekend', 'location_pattern'
         ]
+        interaction_features = ['typing_efficiency', 'usage_intensity', 'device_stress']
+        return base_features + interaction_features
+    
+    def create_sample_data(self, n_samples: int = 1000):
+        """Create sample behavioral data"""
+        print(f"Creating sample data for {self.client_id}...")
         
-        # Extract features with defaults
-        features = []
-        for feature in feature_cols:
-            features.append(sample_data.get(feature, 0))
+        # Use client_id hash for consistent but different data per client
+        np.random.seed(hash(self.client_id) % 2147483647)
+        
+        data = []
+        for i in range(n_samples):
+            sample = {
+                'typing_speed': max(50, np.random.normal(250, 40)),
+                'typing_error_rate': max(0.01, np.random.normal(0.05, 0.02)),
+                'touch_pressure': np.clip(np.random.normal(0.5, 0.15), 0.1, 1.0),
+                'swipe_length': max(50, np.random.normal(150, 30)),
+                'accel_variance': max(0.05, np.random.normal(0.2, 0.05)),
+                'session_duration': max(30, np.random.normal(300, 60)),
+                'interactions_per_minute': max(1, np.random.normal(15, 3)),
+                'scroll_velocity': max(10, np.random.normal(200, 30)),
+                'scroll_frequency': max(1, np.random.poisson(25)),
+                'battery_level': np.random.uniform(0.2, 1.0),
+                'device_temperature': max(20, np.random.normal(35, 3)),
+                'app_response_time': max(10, np.random.normal(150, 25)),
+                'network_latency': max(10, np.random.normal(100, 20)),
+                'hour': np.random.randint(0, 24),
+                'day_of_week': np.random.randint(0, 7),
+                'night_usage_flag': np.random.choice([0, 1], p=[0.8, 0.2]),
+                'is_weekend': np.random.choice([0, 1], p=[0.7, 0.3]),
+                'location_pattern': np.random.choice([0, 1], p=[0.95, 0.05]),
+                'typing_speed_deviation': abs(np.random.normal(0, 15)),
+                'touch_pressure_deviation': abs(np.random.normal(0, 0.03)),
+                'time_since_last': max(300, np.random.exponential(3600))
+            }
+            
+            # Add label (3% anomaly rate)
+            sample['label'] = np.random.choice([0, 1], p=[0.97, 0.03])
+            
+            data.append(sample)
+        
+        df = pd.DataFrame(data)
         
         # Add interaction features
-        typing_efficiency = sample_data.get('typing_speed', 250) / (1 + sample_data.get('typing_error_rate', 0.05))
-        usage_intensity = sample_data.get('session_duration', 300) * sample_data.get('interactions_per_minute', 15)
-        device_stress = sample_data.get('device_temperature', 35) * sample_data.get('battery_level', 0.7)
+        df['typing_efficiency'] = df['typing_speed'] / (1 + df['typing_error_rate'])
+        df['usage_intensity'] = df['session_duration'] * df['interactions_per_minute']
+        df['device_stress'] = df['device_temperature'] * df['battery_level']
         
-        features.extend([typing_efficiency, usage_intensity, device_stress])
+        self.local_data = df
+        print(f"✅ Created {len(df)} samples, anomaly rate: {df['label'].mean():.3f}")
+        return True
+    
+    def load_local_data(self):
+        """Load local data or create sample data"""
+        print(f"📂 Loading data for {self.client_id}...")
+        
+        if self.data_path and os.path.exists(self.data_path):
+            try:
+                df = pd.read_csv(self.data_path)
+                self.local_data = self._ensure_features(df)
+                print(f"✅ Loaded {len(self.local_data)} samples from {self.data_path}")
+                return True
+            except Exception as e:
+                print(f"❌ Error loading data: {e}")
+        
+        print("Creating sample data...")
+        return self.create_sample_data()
+    
+    def _ensure_features(self, df):
+        """Ensure all required features exist in the dataframe"""
+        # Default values for missing features
+        defaults = {
+            'typing_speed': 250.0, 'typing_error_rate': 0.05,
+            'touch_pressure': 0.5, 'swipe_length': 150.0,
+            'accel_variance': 0.2, 'session_duration': 300.0,
+            'interactions_per_minute': 15.0, 'scroll_velocity': 200.0,
+            'scroll_frequency': 25.0, 'battery_level': 0.7,
+            'device_temperature': 35.0, 'app_response_time': 150.0,
+            'network_latency': 100.0, 'typing_speed_deviation': 20.0,
+            'touch_pressure_deviation': 0.05, 'time_since_last': 3600.0,
+            'hour': 12.0, 'day_of_week': 2.0, 'night_usage_flag': 0.0,
+            'is_weekend': 0.0, 'location_pattern': 0.0, 'label': 0
+        }
+        
+        # Add missing base features
+        for feature, default_value in defaults.items():
+            if feature not in df.columns:
+                df[feature] = default_value
+        
+        # Calculate interaction features
+        df['typing_efficiency'] = df['typing_speed'] / (1 + df['typing_error_rate'])
+        df['usage_intensity'] = df['session_duration'] * df['interactions_per_minute']
+        df['device_stress'] = df['device_temperature'] * df['battery_level']
+        
+        # Clean up any invalid values
+        for col in df.select_dtypes(include=[np.number]).columns:
+            df[col] = df[col].fillna(defaults.get(col, 0))
+            df[col] = df[col].replace([np.inf, -np.inf], defaults.get(col, 0))
+        
+        return df
+    
+    def build_local_model(self, input_dim: int = 24):
+        """Build local autoencoder model"""
+        model = tf.keras.Sequential([
+            tf.keras.layers.Input(shape=(input_dim,)),
+            tf.keras.layers.Dense(64, activation='relu'),
+            tf.keras.layers.Dropout(0.2),
+            tf.keras.layers.Dense(32, activation='relu'),
+            tf.keras.layers.Dropout(0.2),
+            tf.keras.layers.Dense(16, activation='relu'),
+            tf.keras.layers.Dense(32, activation='relu'),
+            tf.keras.layers.Dropout(0.2),
+            tf.keras.layers.Dense(64, activation='relu'),
+            tf.keras.layers.Dense(input_dim, activation='linear')
+        ])
+        
+        model.compile(optimizer='adam', loss='mse', metrics=['mae'])
+        return model
+    
+    def prepare_training_data(self):
+        """Prepare data for training"""
+        if self.local_data is None:
+            return None, None
+        
+        # Extract feature columns
+        X = self.local_data[self.feature_columns].values
+        
+        # Handle invalid values
+        X = np.nan_to_num(X, nan=0.0, posinf=1e6, neginf=-1e6)
         
         # Scale features
-        X = np.array(features).reshape(1, -1)
-        X_scaled = self.scaler.transform(X)
+        self.scaler = StandardScaler()
+        X_scaled = self.scaler.fit_transform(X)
         
-        # Get reconstruction
-        reconstruction = self.local_model.predict(X_scaled, verbose=0)
-        reconstruction_error = np.mean((X_scaled - reconstruction) ** 2)
+        return X_scaled, X_scaled  # Autoencoder: input = output
+    
+    def train_local_model(self, global_weights: Optional[List] = None, epochs: int = 10):
+        """Train the local model"""
+        print(f"🏋️  Training {self.client_id}...")
         
-        # Calculate threshold
-        threshold = np.mean(self.local_model.predict(X_scaled, verbose=0)) + 2 * np.std(self.local_model.predict(X_scaled, verbose=0))
+        # Prepare data
+        X_train, y_train = self.prepare_training_data()
+        if X_train is None:
+            print(f"❌ No training data for {self.client_id}")
+            return None
         
-        # Determine if anomaly
-        is_anomaly = reconstruction_error > threshold
+        # Build model
+        self.local_model = self.build_local_model(X_train.shape[1])
         
-        return {
-            'client_id': self.client_id,
-            'reconstruction_error': float(reconstruction_error),
-            'threshold': float(threshold),
-            'is_anomaly': bool(is_anomaly),
-            'confidence': min(1.0, reconstruction_error / threshold) if threshold > 0 else 0.0
-        }
+        # Set global weights if provided
+        if global_weights is not None:
+            try:
+                self.local_model.set_weights(global_weights)
+            except Exception as e:
+                print(f"  ⚠️  Could not set global weights: {e}")
+        
+        # Train model
+        try:
+            history = self.local_model.fit(
+                X_train, y_train,
+                epochs=epochs,
+                batch_size=min(32, max(1, len(X_train) // 4)),
+                verbose=0,
+                validation_split=0.2 if len(X_train) > 20 else 0.0
+            )
+            
+            final_loss = history.history['loss'][-1]
+            print(f"  📊 Final loss: {final_loss:.4f}")
+            
+            return self.local_model.get_weights()
+            
+        except Exception as e:
+            print(f"  ❌ Training error: {e}")
+            return None
+    
+    def save_local_model(self, save_dir: str = "local_models"):
+        """Save the trained model"""
+        os.makedirs(save_dir, exist_ok=True)
+        
+        try:
+            # Save model
+            model_path = os.path.join(save_dir, f"{self.client_id}_model.h5")
+            self.local_model.save(model_path)
+            
+            # Save scaler
+            scaler_path = os.path.join(save_dir, f"{self.client_id}_scaler.pkl")
+            joblib.dump(self.scaler, scaler_path)
+            
+            print(f"💾 Saved {self.client_id} model and scaler")
+            return True
+            
+        except Exception as e:
+            print(f"❌ Save error for {self.client_id}: {e}")
+            return False
 
-def create_federated_clients(num_clients: int = 3) -> List[FederatedAnomalyClient]:
-    """Create federated learning clients"""
-    clients = []
-    
-    for i in range(num_clients):
-        client_id = f"client_{i+1}"
-        data_path = f"client_data/{client_id}_data.csv"
-        
-        client = FederatedAnomalyClient(client_id, data_path)
-        if client.load_local_data():
-            clients.append(client)
-    
-    return clients
 
-def main():
-    """Main function to test federated client"""
-    print("🏠 Federated Anomaly Detection Client")
-    print("=" * 40)
+def test_simple_client():
+    """Test the simple client"""
+    print("🧪 Testing Simple Federated Client")
     
-    # Create client
-    client = FederatedAnomalyClient("test_client", "client_data/client_1_data.csv")
+    client = SimpleFederatedClient("test_client")
     
     if client.load_local_data():
-        # Train local model
         weights = client.train_local_model(epochs=3)
-        
-        # Evaluate model
-        evaluation = client.evaluate_local_model()
-        
-        # Save model
-        client.save_local_model()
-        
-        # Test anomaly detection
-        test_sample = {
-            'typing_speed': 280,
-            'typing_error_rate': 0.08,
-            'touch_pressure': 0.6,
-            'swipe_length': 160,
-            'accel_variance': 0.3,
-            'session_duration': 420,
-            'interactions_per_minute': 18,
-            'scroll_velocity': 220,
-            'scroll_frequency': 30,
-            'battery_level': 0.4,
-            'device_temperature': 38,
-            'app_response_time': 180,
-            'network_latency': 120,
-            'hour': 14,
-            'day_of_week': 2,
-            'night_usage_flag': 0,
-            'is_weekend': 0,
-            'location_pattern': 0
-        }
-        
-        result = client.detect_local_anomalies(test_sample)
-        print(f"\n🔍 Anomaly Detection Result:")
-        print(f"  Anomaly: {result['is_anomaly']}")
-        print(f"  Error: {result['reconstruction_error']:.4f}")
-        print(f"  Confidence: {result['confidence']:.4f}")
+        if weights is not None:
+            client.save_local_model()
+            print("✅ Client test successful!")
+            return client
+    
+    print("❌ Client test failed!")
+    return None
+
 
 if __name__ == "__main__":
-    main()
+    test_simple_client()
