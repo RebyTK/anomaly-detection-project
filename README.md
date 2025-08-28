@@ -1,6 +1,9 @@
 # Samsung EnnovateX 2025 AI Challenge Submission
 
-A machine learning project focused on detecting anomalies using behavior analysis and rich behavioral data.
+Problem Statement - On-Device Multi-Agent System for Behavior-Based Anomaly & Fraud Detection
+Team name - Rishabh and Raghav
+Team members (Names) - Raghav Bagai, Rishabh Garg
+Demo Video Link - 
 
 ## 🚀 Features
 
