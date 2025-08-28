@@ -9,86 +9,8 @@ Demo Video Link -
 
 ## Overview
 
-The Anomaly Detection Project is an on-device multi-agent system designed for behavior-based anomaly and fraud detection. This project implements advanced machine learning techniques to identify unusual patterns and potential security threats through behavioral analysis.
+This project implements a robust anomaly detection system using both centralized and federated learning approaches. It is designed to detect abnormal user behavior in time-series and tabular data, supporting privacy-preserving distributed training across multiple clients.
 
-### Team Information
-- **Team Name**: Rishabh and Raghav
-- **Team Members**: 
-  - Raghav Bagai
-  - Rishabh Garg
-
-## Table of Contents
-
-1. [Project Architecture](#project-architecture)
-2. [Features](#features)
-3. [Installation](#installation)
-4. [Usage](#usage)
-5. [API Reference](#api-reference)
-6. [File Structure](#file-structure)
-7. [Configuration](#configuration)
-8. [Contributing](#contributing)
-9. [Troubleshooting](#troubleshooting)
-10. [License](#license)
-
-## Project Architecture
-
-The system follows a modular architecture with the following key components:
-
-- **Dataset Generation Module**: Creates rich behavioral datasets for training
-- **Model Training Module**: Implements both basic and advanced behavior models
-- **Real-time Inference Engine**: Provides live anomaly detection capabilities
-- **Batch Processing System**: Handles large-scale data analysis
-- **On-device Analysis**: Optimized for edge computing scenarios
-
-## Features
-
-### Core Capabilities
-- **Behavior Model Training**: Train models with rich datasets for accurate behavior pattern recognition
-- **Real-time Anomaly Inference**: Detect anomalies as they occur with minimal latency
-- **Batch Processing**: Analyze large volumes of historical data efficiently
-- **On-device Behavior Analysis**: Perform analysis locally without cloud dependency
-- **Multi-agent System**: Coordinate multiple detection agents for comprehensive coverage
-
-### Key Benefits
-- Low latency detection
-- Privacy-preserving on-device processing
-- Scalable architecture
-- Rich dataset support
-- Fraud detection capabilities
-
-## Installation
-
-### Prerequisites
-- Python 3.7+
-- Virtual environment support
-- Git
-
-### Setup Instructions
-
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/RebyTK/anomaly-detection-project.git
-   cd anomaly-detection-project
-   ```
-
-2. **Create and activate virtual environment**:
-   ```bash
-   # Create virtual environment
-   python -m venv venv
-   
-   # Activate (Linux/Mac)
-   source venv/bin/activate
-   
-   # Activate (Windows)
-   venv\Scripts\activate
-   ```
-
-3. **Install dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-### System Requirements
 
 #### Recommended Dependencies
 ```txt
@@ -100,130 +22,57 @@ matplotlib>=3.4.0
 seaborn>=0.11.0
 ```
 
-## Usage
-
-### Quick Start
-
-The project provides several entry points for different use cases:
-
-#### 1. Dataset Generation
-Generate rich behavioral datasets for model training:
-```bash
-python generate_rich_behavior_dataset.py
-```
-
-#### 2. Model Training
-
-**Basic Behavior Model**:
-```bash
-python train_behavior_model.py
-```
-
-**Advanced Rich Behavior Model**:
-```bash
-python train_behavior_rich_model.py
-```
-
-#### 3. Inference
-
-**Real-time Inference**:
-```bash
-python inference_rich_behavior.py
-```
-
-**Batch Processing**:
-```bash
-python infer_rich_behavior_batch.py
-```
-
-### Workflow Example
-
-```bash
-# 1. Generate training data
-python generate_rich_behavior_dataset.py
-
-# 2. Train the behavior model
-python train_behavior_rich_model.py
-
-# 3. Run real-time anomaly detection
-python inference_rich_behavior.py
-```
-
-## API Reference
-
-### Core Modules
-
-#### Dataset Generation (`generate_rich_behavior_dataset.py`)
-Generates comprehensive behavioral datasets with various patterns and anomalies.
-
-**Key Functions**:
-- `generate_normal_behavior()`: Creates baseline behavior patterns
-- `inject_anomalies()`: Introduces various types of anomalies
-- `save_dataset()`: Exports generated data for training
-
-#### Model Training (`train_behavior_rich_model.py`)
-Implements advanced machine learning models for behavior analysis.
-
-**Key Classes**:
-- `BehaviorModel`: Main model class for behavior pattern recognition
-- `FeatureExtractor`: Extracts relevant features from raw data
-- `ModelTrainer`: Handles training process and optimization
-
-#### Real-time Inference (`inference_rich_behavior.py`)
-Provides live anomaly detection capabilities.
-
-**Key Functions**:
-- `load_model()`: Loads trained behavior model
-- `process_real_time_data()`: Analyzes incoming data streams
-- `detect_anomalies()`: Identifies suspicious patterns
-
-#### Batch Processing (`infer_rich_behavior_batch.py`)
-Handles large-scale data analysis for historical data review.
-
-**Key Features**:
-- Efficient batch processing algorithms
-- Parallel processing support
-- Result aggregation and reporting
 
 ## File Structure
 
 ```
 anomaly-detection-project/
-├── generate_rich_behavior_dataset.py    # Dataset generation module
-├── train_behavior_model.py             # Basic behavior model training
-├── train_behavior_rich_model.py        # Advanced behavior model training
-├── inference_rich_behavior.py          # Real-time inference engine
-├── infer_rich_behavior_batch.py        # Batch processing system
-├── ondevice-behaviour/                 # On-device analysis module
-│   ├── __init__.py
-│   ├── core/                          # Core analysis algorithms
-│   ├── models/                        # Model definitions
-│   └── utils/                         # Utility functions
-├── requirements.txt                    # Project dependencies
-├── README.md                          # Project overview
-├── LICENSE                            # License information
-└── .gitignore                         # Git ignore rules
+│
+├── anomaly-detection/         # Centralized anomaly detection code and models
+│   ├── data_generator.py      # Synthetic data generator
+│   ├── enhanced_training_model.py  # Centralized model training and evaluation
+│   ├── enhanced_behavior_dataset.csv # Generated dataset
+│   ├── ...                    # Model files, results, and utilities
+│
+├── federated-learning/        # Federated learning implementation
+│   ├── federated_anomaly_client.py   # Client-side training logic
+│   ├── federated_anomaly_server.py   # Server-side aggregation logic
+│   ├── federated_inference.py        # Federated inference and evaluation
+│   ├── client_data/           # Simulated client datasets
+│   ├── federated_models/      # Global federated models
+│   ├── local_models/          # Individual client models
+│   ├── ...                    # Results, plots, and configs
+│
+├── requirements.txt           # Python dependencies
+├── README.md                  # Project overview and setup
+└── .gitignore                 # Git ignore rules
 ```
 
-## Configuration
+## Key Components
 
-### Environment Variables
-Create a `.env` file for configuration:
+1. Data Generation (data_generator.py)
+Generates synthetic user behavior data with realistic and anomalous patterns.
+Supports feature engineering and temporal feature addition.
+2. Centralized Model Training (enhanced_training_model.py)
+Trains anomaly detection models (Isolation Forest, VAE, LSTM, etc.) on the full dataset.
+Evaluates models using metrics like accuracy, ROC-AUC, and confusion matrix.
+Saves trained models and scalers for inference.
+3. Federated Learning (federated-learning)
+Client (federated_anomaly_client.py): Loads local data, trains local models, and shares model weights.
+Server (federated_anomaly_server.py): Aggregates client weights using federated averaging to update the global model.
+Inference (federated_inference.py): Loads global and client models for distributed anomaly detection and evaluation.
 
-```env
-# Model Configuration
-MODEL_PATH=./models/
-DATASET_PATH=./data/
-LOG_LEVEL=INFO
+### Setup Instructions
+```
+pip install -r requirements.txt
 
-# Processing Configuration
-BATCH_SIZE=1000
-INFERENCE_THRESHOLD=0.85
-REAL_TIME_BUFFER=100
+python anomaly-detection/data_generator.py
 
-# On-device Configuration
-MAX_MEMORY_USAGE=512MB
-PROCESSING_THREADS=4
+python anomaly-detection/enhanced_training_model.py
+
+python federated-learning/federated_anomaly_server.py
+
+python federated-learning/federated_inference.py
 ```
 
 ### Model Parameters
@@ -331,21 +180,6 @@ We welcome contributions to improve the anomaly detection system!
 - Update documentation as needed
 - Include clear commit messages
 
-## Future Enhancements
-
-### Planned Features
-- **Deep Learning Integration**: Advanced neural network architectures
-- **Federated Learning**: Distributed training across multiple devices
-- **Explainable AI**: Interpretability features for anomaly explanations
-- **Auto-scaling**: Dynamic resource allocation based on workload
-- **Advanced Visualization**: Interactive dashboards for monitoring
-
-### Research Areas
-- Adversarial anomaly detection
-- Zero-shot learning for unknown anomaly types
-- Transfer learning across different domains
-- Real-time model updating and adaptation
-
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for full details.
@@ -356,11 +190,6 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 - **Issue Tracker**: [GitHub Issues](https://github.com/RebyTK/anomaly-detection-project/issues)
 - **Documentation**: This file serves as the primary technical documentation
 
-## Acknowledgments
-
-- Research community for anomaly detection methodologies
-- Open-source libraries and frameworks used in this project
-- Contributors and collaborators
 
 ---
 
