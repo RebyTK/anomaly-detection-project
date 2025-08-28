@@ -1,6 +1,3 @@
-import sys
-import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'anomaly-detection')))
 import numpy as np
 import pandas as pd
 import tensorflow as tf
@@ -302,7 +299,7 @@ class EnhancedAnomalyDetector:
 # Load data and train models
 print("Loading enhanced dataset...")
 try:
-    df = pd.read_csv(os.path.join(os.path.dirname(__file__), "enhanced_behavior_dataset.csv"))
+    df = pd.read_csv("enhanced_behavior_dataset.csv")
 except FileNotFoundError:
     print("Enhanced dataset not found. Using original dataset...")
     df = pd.read_csv("rich_user_behavior.csv")
