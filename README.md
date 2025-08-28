@@ -1,4 +1,4 @@
-# Anomaly Detection Project
+# Samsung EnnovateX 2025 AI Challenge Submission
 
 A machine learning project focused on detecting anomalies using behavior analysis and rich behavioral data.
 
